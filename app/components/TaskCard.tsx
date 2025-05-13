@@ -1,12 +1,23 @@
 "use client"
 
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Card } from "@/components/ui/card"
+import { Task } from "../db/schema"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, MoreVertical, Calendar } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Task } from "./KanbanBoard"
+
+const USERS = [
+  { id: "1", name: "John Doe", avatar: "/avatars/john.png" },
+  { id: "2", name: "Jane Smith", avatar: "/avatars/jane.png" },
+  { id: "3", name: "Mike Johnson", avatar: "/avatars/mike.png" },
+]
 
 interface TaskCardProps {
   task: Task
@@ -15,90 +26,54 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
+  const assignee = USERS.find(user => user.id === task.assignee)
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="p-4 cursor-grab active:cursor-grabbing"
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-medium">{task.title}</h3>
+    <Card className="group hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="space-y-1">
+          <CardTitle className="text-base font-medium">{task.title}</CardTitle>
           {task.description && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {task.description}
-            </p>
+            <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
           )}
-          <div className="flex gap-2 mt-2">
-            {task.dueDate && (
-              <span className="text-xs text-muted-foreground">
-                Due: {format(task.dueDate, "MMM d, yyyy")}
-              </span>
-            )}
-            {task.assignee && (
-              <span className="text-xs text-muted-foreground">
-                Assigned to: {task.assignee}
-              </span>
-            )}
-            {task.priority && (
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  task.priority === "high"
-                    ? "bg-red-100 text-red-700"
-                    : task.priority === "medium"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                {task.priority}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-1">
-          {onEdit && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          {task.dueDate && (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+            </div>
           )}
         </div>
-      </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={onDelete} 
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarFallback>{task.assignee?.[0] || "?"}</AvatarFallback>
+          </Avatar>
+          <span className="text-sm text-muted-foreground">
+            {task.assignee || "Unassigned"}
+          </span>
+        </div>
+      </CardContent>
     </Card>
   )
 } 

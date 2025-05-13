@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1746832880750,
+      "tag": "0000_early_speed",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1747108629220,
+      "tag": "0001_absent_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747108875607,
+      "tag": "0002_huge_gamma_corps",
+      "breakpoints": true
+    }
+  ]
+}

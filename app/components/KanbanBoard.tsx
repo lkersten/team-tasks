@@ -13,27 +13,42 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  useDroppable,
+  useDraggable,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { TaskCard } from "./TaskCard"
 import { TaskDialog } from "./TaskDialog"
-import { format } from "date-fns"
+import type { Task, Column } from "../db/schema"
+import { addTask, updateTask, deleteTask } from "../actions/boardActions"
 
-export interface Task {
-  id: string
-  title: string
-  description?: string
-  status: "todo" | "in-progress" | "completed"
-  dueDate?: Date
-  assignee?: string
-  priority?: "low" | "medium" | "high"
+// Create Droppable component
+function Droppable({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id })
+  return <div ref={setNodeRef}>{children}</div>
+}
+
+// Create Draggable component
+function Draggable({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id })
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      {children}
+    </div>
+  )
 }
 
 interface KanbanBoardProps {
+  initialColumns: Column[]
   initialTasks: Task[]
 }
 
-export function KanbanBoard({ initialTasks }: KanbanBoardProps) {
+export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) {
+  const [columns, setColumns] = useState<Column[]>(initialColumns)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -47,107 +62,111 @@ export function KanbanBoard({ initialTasks }: KanbanBoardProps) {
     })
   )
 
-  const columns = [
-    { id: "todo", title: "Todo" },
-    { id: "in-progress", title: "In Progress" },
-    { id: "completed", title: "Completed" },
-  ]
-
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
     const task = tasks.find((t) => t.id === active.id)
     if (task) setActiveTask(task)
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over) return
 
-    setTasks((tasks) =>
-      tasks.map((task) =>
-        task.id === active.id
-          ? { ...task, status: over.id as Task["status"] }
-          : task
+    const taskId = Number(active.id)
+    const newColumnId = Number(over.id)
+    
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, columnId: newColumnId } : task
       )
     )
     setActiveTask(null)
   }
 
-  const handleAddTask = (task: Task) => {
-    setTasks((prev) => [...prev, task])
+  const handleEditTask = async (task: Task) => {
+    setEditingTask(task)
+    setIsDialogOpen(true)
   }
 
-  const handleEditTask = (task: Task) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, ...task } : t))
-    )
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      await deleteTask(taskId)
+      setTasks(tasks.filter(t => t.id !== taskId))
+    } catch (error) {
+      console.error("Error deleting task:", error)
+    }
   }
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId))
+  const handleSaveTask = async (taskData: Omit<Task, "id" | "createdAt" | "updatedAt">) => {
+    try {
+      if (editingTask) {
+        const updatedTask = await updateTask({ ...taskData, id: editingTask.id } as Task)
+        setTasks(tasks.map(t => t.id === editingTask.id ? updatedTask : t))
+      } else {
+        const newTask = await addTask(taskData)
+        setTasks([...tasks, newTask])
+      }
+    } catch (error) {
+      console.error("Error saving task:", error)
+    }
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex gap-4 h-[calc(100vh-4rem)] p-4">
-        {columns.map((column) => (
-          <div key={column.id} className="flex-1 flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold">{column.title}</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setEditingTask(null)
-                  setIsDialogOpen(true)
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Task
-              </Button>
-            </div>
-            <ScrollArea className="flex-1 rounded-md border p-4">
-              <SortableContext
-                items={tasks
-                  .filter((task) => task.status === column.id)
-                  .map((task) => task.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="flex flex-col gap-4">
+    <div className="flex h-full flex-col gap-4 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Kanban Board</h1>
+        <Button onClick={() => {
+          setEditingTask(null)
+          setIsDialogOpen(true)
+        }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Task
+        </Button>
+      </div>
+      
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid flex-1 grid-cols-3 gap-4">
+          {columns.map((column) => (
+            <div key={column.id} className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold">{column.title}</h2>
+                <span className="text-sm text-muted-foreground">
+                  {tasks.filter((task) => task.columnId === column.id).length}
+                </span>
+              </div>
+              <Droppable id={column.id.toString()}>
+                <div className="flex-1 space-y-4 rounded-lg border p-4">
                   {tasks
-                    .filter((task) => task.status === column.id)
+                    .filter((task) => task.columnId === column.id)
                     .map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onEdit={() => {
-                          setEditingTask(task)
-                          setIsDialogOpen(true)
-                        }}
-                        onDelete={() => handleDeleteTask(task.id)}
-                      />
+                      <Draggable key={task.id} id={task.id.toString()}>
+                        <TaskCard
+                          task={task}
+                          onEdit={() => handleEditTask(task)}
+                          onDelete={() => handleDeleteTask(task.id)}
+                        />
+                      </Draggable>
                     ))}
                 </div>
-              </SortableContext>
-            </ScrollArea>
-          </div>
-        ))}
-      </div>
-
-      <DragOverlay>
-        {activeTask && <TaskCard task={activeTask} />}
-      </DragOverlay>
+              </Droppable>
+            </div>
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
+      </DndContext>
 
       <TaskDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         task={editingTask}
-        onSave={editingTask ? handleEditTask : handleAddTask}
+        onSave={handleSaveTask}
       />
-    </DndContext>
+    </div>
   )
 } 

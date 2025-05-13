@@ -1,19 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Task } from "./KanbanBoard"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { Task } from "../db/schema"
+
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  assignee: z.string().optional(),
+  status: z.string().default("todo"),
+  columnId: z.string().min(1, "Status is required"),
+  dueDate: z.string().optional(),
+})
 
 interface TaskDialogProps {
   open: boolean
@@ -23,32 +29,44 @@ interface TaskDialogProps {
 }
 
 export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
-  const [formData, setFormData] = useState<Partial<Task>>({
-    title: "",
-    description: "",
-    status: "todo",
-    priority: "medium",
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      assignee: "",
+      columnId: "1",
+    },
   })
 
   useEffect(() => {
     if (task) {
-      setFormData(task)
+      form.reset({
+        title: task.title || "",
+        description: task.description || "",
+        assignee: task.assignee || "",
+        columnId: task.columnId?.toString() || "1",
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      })
     } else {
-      setFormData({
+      form.reset({
         title: "",
         description: "",
-        status: "todo",
-        priority: "medium",
+        assignee: "",
+        columnId: "1",
+        dueDate: "",
       })
     }
-  }, [task])
+  }, [task, form, open])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    onSave({
-      id: task?.id || crypto.randomUUID(),
-      ...formData,
-    } as Task)
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    const taskData = {
+      ...values,
+      columnId: parseInt(values.columnId),
+      dueDate: values.dueDate ? new Date(values.dueDate) : null,
+    } as Omit<Task, "id" | "createdAt" | "updatedAt">
+
+    onSave(taskData)
     onOpenChange(false)
   }
 
@@ -56,97 +74,87 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
+          <DialogTitle>{task?.id ? "Edit Task" : "Add Task"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({ ...prev, title: e.target.value }))
-              }
-              required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setFormData((prev) => ({ ...prev, description: e.target.value }))
-              }
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value: string) =>
-                setFormData((prev) => ({ ...prev, status: value as Task["status"] }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">Todo</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="priority">Priority</Label>
-            <Select
-              value={formData.priority}
-              onValueChange={(value: string) =>
-                setFormData((prev) => ({ ...prev, priority: value as Task["priority"] }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="assignee">Assignee</Label>
-            <Input
-              id="assignee"
-              value={formData.assignee || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({ ...prev, assignee: e.target.value }))
-              }
+            <FormField
+              control={form.control}
+              name="assignee"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assignee</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label htmlFor="dueDate">Due Date</Label>
-            <Input
-              id="dueDate"
-              type="date"
-              value={formData.dueDate ? new Date(formData.dueDate).toISOString().split('T')[0] : ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  dueDate: e.target.value ? new Date(e.target.value) : undefined,
-                }))
-              }
+            <FormField
+              control={form.control}
+              name="columnId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "1"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="1">Todo</SelectItem>
+                      <SelectItem value="2">In Progress</SelectItem>
+                      <SelectItem value="3">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Save</Button>
-          </div>
-        </form>
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit">{task?.id ? "Save Changes" : "Create Task"}</Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
