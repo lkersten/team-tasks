@@ -1,79 +1,39 @@
 "use client"
 
-import { Task } from "../db/schema"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Pencil, Trash2, MoreVertical, Calendar } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Task } from "@/db/schema"
+import { useDraggable } from "@dnd-kit/core"
 import { format } from "date-fns"
-
-const USERS = [
-  { id: "1", name: "John Doe", avatar: "/avatars/john.png" },
-  { id: "2", name: "Jane Smith", avatar: "/avatars/jane.png" },
-  { id: "3", name: "Mike Johnson", avatar: "/avatars/mike.png" },
-]
 
 interface TaskCardProps {
   task: Task
-  onEdit?: () => void
-  onDelete?: () => void
 }
 
-export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
-  const assignee = USERS.find(user => user.id === task.assignee)
+export function TaskCard({ task }: TaskCardProps) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: task.id.toString(),
+  })
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
 
   return (
-    <Card className="group hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <CardTitle className="text-base font-medium">{task.title}</CardTitle>
-          {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
-          )}
-          {task.dueDate && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
-            </div>
-          )}
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className="p-3 bg-card rounded-lg shadow-sm cursor-move"
+    >
+      <h4 className="font-medium">{task.title}</h4>
+      {task.description && (
+        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+      )}
+      {task.dueDate && (
+        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
+          <span>Due: {format(new Date(task.dueDate), "MMM d, yyyy")}</span>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={onDelete} 
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6">
-            <AvatarFallback>{task.assignee?.[0] || "?"}</AvatarFallback>
-          </Avatar>
-          <span className="text-sm text-muted-foreground">
-            {task.assignee || "Unassigned"}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 } 
