@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
+import { enUS } from "date-fns/locale"
 
 const USERS = [
   { id: "1", name: "John Doe", avatar: "/avatars/john.png" },
@@ -40,7 +41,7 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             {task.dueDate && (
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+                <span>{format(new Date(task.dueDate), "MMM d, yyyy", { locale: enUS })}</span>
               </div>
             )}
           </div>
