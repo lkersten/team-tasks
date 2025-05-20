@@ -16,9 +16,12 @@ const db = drizzle(pool, { schema })
 
 async function main() {
   try {
+    // Delete existing columns
+    await db.delete(schema.columns)
+    
     // Insert default columns
     await db.insert(schema.columns).values([
-      { title: "Todo", order: 0 },
+      { title: "To Do", order: 0 },
       { title: "In Progress", order: 1 },
       { title: "Completed", order: 2 },
     ])

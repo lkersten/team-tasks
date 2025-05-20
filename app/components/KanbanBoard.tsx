@@ -166,6 +166,7 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
         onOpenChange={setIsDialogOpen}
         task={editingTask}
         onSave={handleSaveTask}
+        columns={columns}
       />
     </div>
   )

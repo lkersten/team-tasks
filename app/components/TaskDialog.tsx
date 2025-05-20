@@ -17,6 +17,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   assignee: z.string().optional(),
   status: z.string().default("todo"),
+  priority: z.string().default("medium"),
   columnId: z.string().min(1, "Status is required"),
   dueDate: z.string().optional(),
 })
@@ -26,16 +27,18 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void
   task?: Task | null
   onSave: (task: Task) => void
+  columns: { id: number; title: string }[]
 }
 
-export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, onSave, columns }: TaskDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
       assignee: "",
-      columnId: "1",
+      priority: "medium",
+      columnId: columns[0]?.id.toString() || "",
     },
   })
 
@@ -45,7 +48,8 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
         title: task.title || "",
         description: task.description || "",
         assignee: task.assignee || "",
-        columnId: task.columnId?.toString() || "1",
+        priority: task.priority || "medium",
+        columnId: task.columnId?.toString() || columns[0]?.id.toString() || "",
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
       })
     } else {
@@ -53,11 +57,12 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
         title: "",
         description: "",
         assignee: "",
-        columnId: "1",
+        priority: "medium",
+        columnId: columns[0]?.id.toString() || "",
         dueDate: "",
       })
     }
-  }, [task, form, open])
+  }, [task, form, open, columns])
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const taskData = {
@@ -119,20 +124,44 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
             />
             <FormField
               control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "medium"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="columnId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || "1"}>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="1">Todo</SelectItem>
-                      <SelectItem value="2">In Progress</SelectItem>
-                      <SelectItem value="3">Completed</SelectItem>
+                      {columns.map((column) => (
+                        <SelectItem key={column.id} value={column.id.toString()}>
+                          {column.title}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

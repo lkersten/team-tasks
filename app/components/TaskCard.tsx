@@ -36,12 +36,14 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           {task.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
           )}
-          {task.dueDate && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {task.dueDate && (
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+              </div>
+            )}
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -65,12 +67,21 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
         </DropdownMenu>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6">
-            <AvatarFallback>{task.assignee?.[0] || "?"}</AvatarFallback>
-          </Avatar>
-          <span className="text-sm text-muted-foreground">
-            {task.assignee || "Unassigned"}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback>{task.assignee?.[0] || "?"}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-muted-foreground">
+              {task.assignee || "Unassigned"}
+            </span>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+            task.priority === 'high' ? 'bg-red-100 text-red-700' :
+            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+            'bg-green-100 text-green-700'
+          }`}>
+            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
           </span>
         </div>
       </CardContent>
