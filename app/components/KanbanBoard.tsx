@@ -72,12 +72,33 @@ function KanbanBoardComponent({ initialColumns, initialTasks }: KanbanBoardProps
     const taskId = Number(active.id)
     const newColumnId = Number(over.id)
     
+    // Get the task to update before state change
+    const taskToUpdate = tasks.find(t => t.id === taskId)
+    if (!taskToUpdate) return
+
+    // Update local state immediately for UI responsiveness
     setTasks((prevTasks) =>
       prevTasks.map((task) =>
         task.id === taskId ? { ...task, columnId: newColumnId } : task
       )
     )
     setActiveTask(null)
+
+    // Update the database after state change
+    try {
+      await updateTask({
+        ...taskToUpdate,
+        columnId: newColumnId
+      })
+    } catch (error) {
+      console.error("Error updating task column:", error)
+      // Revert local state if update fails
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId ? { ...task, columnId: taskToUpdate.columnId } : task
+        )
+      )
+    }
   }
 
   const handleEditTask = async (task: Task) => {
@@ -146,10 +167,27 @@ function KanbanBoardComponent({ initialColumns, initialTasks }: KanbanBoardProps
                           columns={initialColumns}
                           onEdit={() => handleEditTask(task)}
                           onDelete={() => handleDeleteTask(task.id)}
-                          onMove={(taskId, newColumnId) => {
+                          onMove={async (taskId, newColumnId) => {
+                            // Update local state immediately
                             setTasks(tasks.map(t => 
                               t.id === taskId ? { ...t, columnId: newColumnId } : t
                             ))
+                            // Update database
+                            try {
+                              const taskToUpdate = tasks.find(t => t.id === taskId)
+                              if (taskToUpdate) {
+                                await updateTask({
+                                  ...taskToUpdate,
+                                  columnId: newColumnId
+                                })
+                              }
+                            } catch (error) {
+                              console.error("Error updating task column:", error)
+                              // Revert local state if update fails
+                              setTasks(tasks.map(t => 
+                                t.id === taskId ? { ...t, columnId: t.columnId } : t
+                              ))
+                            }
                           }}
                         />
                       </Draggable>

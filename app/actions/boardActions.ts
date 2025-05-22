@@ -23,7 +23,7 @@ export async function addTask(task: Omit<Task, "id" | "createdAt" | "updatedAt">
       ...task,
       status: task.status || "todo",
       columnId: parseInt(task.columnId.toString()),
-      dueDate: task.dueDate ? new Date(task.dueDate + 'T12:00:00.000Z') : null,
+      dueDate: task.dueDate ? new Date(task.dueDate) : null,
     }).returning()
     revalidatePath("/")
     return newTask
@@ -38,12 +38,9 @@ export async function updateTask(task: Task) {
     const [updatedTask] = await db
       .update(tasks)
       .set({
-        title: task.title,
-        description: task.description,
-        assignee: task.assignee,
-        status: task.status,
+        ...task,
         columnId: parseInt(task.columnId.toString()),
-        dueDate: task.dueDate ? new Date(task.dueDate + 'T12:00:00.000Z') : null,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, task.id))
