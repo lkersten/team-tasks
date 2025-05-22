@@ -1,14 +1,17 @@
 "use client"
 
-import { Task } from "../db/schema"
+import { Task, Column } from "../db/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2, MoreVertical, Calendar } from "lucide-react"
+import { Pencil, Trash2, MoreVertical, Calendar, ArrowRight } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
@@ -22,12 +25,15 @@ const USERS = [
 
 interface TaskCardProps {
   task: Task
+  columns: Column[]
   onEdit?: () => void
   onDelete?: () => void
+  onMove?: (taskId: number, newColumnId: number) => void
 }
 
-export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+export function TaskCard({ task, columns, onEdit, onDelete, onMove }: TaskCardProps) {
   const assignee = USERS.find(user => user.id === task.assignee)
+  const availableColumns = columns.filter(col => col.id !== task.columnId)
 
   return (
     <Card className="group hover:shadow-md transition-shadow">
@@ -57,6 +63,24 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
+            {availableColumns.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Move to
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {availableColumns.map((column) => (
+                    <DropdownMenuItem
+                      key={column.id}
+                      onClick={() => onMove?.(task.id, column.id)}
+                    >
+                      {column.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
             <DropdownMenuItem 
               onClick={onDelete} 
               className="text-destructive"

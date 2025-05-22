@@ -146,8 +146,14 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
                       <Draggable key={task.id} id={task.id.toString()}>
                         <TaskCard
                           task={task}
+                          columns={columns}
                           onEdit={() => handleEditTask(task)}
                           onDelete={() => handleDeleteTask(task.id)}
+                          onMove={(taskId, newColumnId) => {
+                            setTasks(tasks.map(t => 
+                              t.id === taskId ? { ...t, columnId: newColumnId } : t
+                            ))
+                          }}
                         />
                       </Draggable>
                     ))}
@@ -157,7 +163,15 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
           ))}
         </div>
         <DragOverlay>
-          {activeTask ? <TaskCard task={activeTask} /> : null}
+          {activeTask ? (
+            <TaskCard
+              task={activeTask}
+              columns={columns}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onMove={() => {}}
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
 
