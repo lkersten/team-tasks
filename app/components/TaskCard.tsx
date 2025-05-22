@@ -2,7 +2,7 @@
 
 import { Task, Column } from "../db/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2, MoreVertical, Calendar, ArrowRight } from "lucide-react"
 import {
@@ -17,12 +17,6 @@ import {
 import { format } from "date-fns"
 import { enUS } from "date-fns/locale"
 
-const USERS = [
-  { id: "1", name: "John Doe", avatar: "/avatars/john.png" },
-  { id: "2", name: "Jane Smith", avatar: "/avatars/jane.png" },
-  { id: "3", name: "Mike Johnson", avatar: "/avatars/mike.png" },
-]
-
 interface TaskCardProps {
   task: Task
   columns: Column[]
@@ -32,8 +26,13 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, columns, onEdit, onDelete, onMove }: TaskCardProps) {
-  const assignee = USERS.find(user => user.id === task.assignee)
   const availableColumns = columns.filter(col => col.id !== task.columnId)
+
+  const formatDueDate = (date: string | Date | null) => {
+    if (!date) return null
+    const dateObj = typeof date === 'string' ? new Date(date + 'T12:00:00.000Z') : date
+    return format(dateObj, "MMM d, yyyy", { locale: enUS })
+  }
 
   return (
     <Card className="group hover:shadow-md transition-shadow">
@@ -47,7 +46,7 @@ export function TaskCard({ task, columns, onEdit, onDelete, onMove }: TaskCardPr
             {task.dueDate && (
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{format(new Date(task.dueDate), "MMM d, yyyy", { locale: enUS })}</span>
+                <span>{formatDueDate(task.dueDate)}</span>
               </div>
             )}
           </div>

@@ -14,31 +14,35 @@ import type { Task } from "../db/schema"
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  assignee: z.string().optional(),
-  status: z.string().default("todo"),
-  priority: z.string().default("medium"),
+  description: z.string().nullable(),
+  assignee: z.string().nullable(),
+  status: z.string(),
+  priority: z.string(),
   columnId: z.string().min(1, "Status is required"),
-  dueDate: z.string().optional(),
+  dueDate: z.string().nullable(),
 })
+
+type FormValues = z.infer<typeof formSchema>
 
 interface TaskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   task?: Task | null
-  onSave: (task: Task) => void
+  onSave: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => void
   columns: { id: number; title: string }[]
 }
 
 export function TaskDialog({ open, onOpenChange, task, onSave, columns }: TaskDialogProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
       assignee: "",
+      status: "todo",
       priority: "medium",
       columnId: columns[0]?.id.toString() || "",
+      dueDate: "",
     },
   })
 
@@ -48,6 +52,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, columns }: TaskDi
         title: task.title || "",
         description: task.description || "",
         assignee: task.assignee || "",
+        status: task.status || "todo",
         priority: task.priority || "medium",
         columnId: task.columnId?.toString() || columns[0]?.id.toString() || "",
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
@@ -57,6 +62,7 @@ export function TaskDialog({ open, onOpenChange, task, onSave, columns }: TaskDi
         title: "",
         description: "",
         assignee: "",
+        status: "todo",
         priority: "medium",
         columnId: columns[0]?.id.toString() || "",
         dueDate: "",
@@ -64,11 +70,11 @@ export function TaskDialog({ open, onOpenChange, task, onSave, columns }: TaskDi
     }
   }, [task, form, open, columns])
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: FormValues) => {
     const taskData = {
       ...values,
       columnId: parseInt(values.columnId),
-      dueDate: values.dueDate ? new Date(values.dueDate) : null,
+      dueDate: values.dueDate || null,
     } as Omit<Task, "id" | "createdAt" | "updatedAt">
 
     onSave(taskData)

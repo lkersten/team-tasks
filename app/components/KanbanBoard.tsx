@@ -1,8 +1,7 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import {
@@ -16,7 +15,6 @@ import {
   useDroppable,
   useDraggable,
 } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { TaskCard } from "./TaskCard"
 import { TaskDialog } from "./TaskDialog"
 import type { Task, Column } from "../db/schema"
@@ -47,8 +45,7 @@ interface KanbanBoardProps {
   initialTasks: Task[]
 }
 
-export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) {
-  const [columns, setColumns] = useState<Column[]>(initialColumns)
+function KanbanBoardComponent({ initialColumns, initialTasks }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -130,7 +127,7 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
         onDragEnd={handleDragEnd}
       >
         <div className="grid flex-1 grid-cols-3 gap-4">
-          {columns.map((column) => (
+          {initialColumns.map((column) => (
             <div key={column.id} className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold">{column.title}</h2>
@@ -146,7 +143,7 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
                       <Draggable key={task.id} id={task.id.toString()}>
                         <TaskCard
                           task={task}
-                          columns={columns}
+                          columns={initialColumns}
                           onEdit={() => handleEditTask(task)}
                           onDelete={() => handleDeleteTask(task.id)}
                           onMove={(taskId, newColumnId) => {
@@ -166,7 +163,7 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
           {activeTask ? (
             <TaskCard
               task={activeTask}
-              columns={columns}
+              columns={initialColumns}
               onEdit={() => {}}
               onDelete={() => {}}
               onMove={() => {}}
@@ -180,8 +177,13 @@ export function KanbanBoard({ initialColumns, initialTasks }: KanbanBoardProps) 
         onOpenChange={setIsDialogOpen}
         task={editingTask}
         onSave={handleSaveTask}
-        columns={columns}
+        columns={initialColumns}
       />
     </div>
   )
-} 
+}
+
+// Export a dynamically loaded version with SSR disabled
+export const KanbanBoard = dynamic(() => Promise.resolve(KanbanBoardComponent), {
+  ssr: false
+}) 

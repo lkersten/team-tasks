@@ -2,7 +2,6 @@
 
 import { db } from "@/db/drizzle"
 import { tasks, columns } from "@/db/schema"
-import { desc } from "drizzle-orm"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import type { Task } from "@/db/schema"
@@ -24,7 +23,7 @@ export async function addTask(task: Omit<Task, "id" | "createdAt" | "updatedAt">
       ...task,
       status: task.status || "todo",
       columnId: parseInt(task.columnId.toString()),
-      dueDate: task.dueDate ? new Date(task.dueDate) : null,
+      dueDate: task.dueDate ? new Date(task.dueDate + 'T12:00:00.000Z') : null,
     }).returning()
     revalidatePath("/")
     return newTask
@@ -44,7 +43,7 @@ export async function updateTask(task: Task) {
         assignee: task.assignee,
         status: task.status,
         columnId: parseInt(task.columnId.toString()),
-        dueDate: task.dueDate ? new Date(task.dueDate) : null,
+        dueDate: task.dueDate ? new Date(task.dueDate + 'T12:00:00.000Z') : null,
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, task.id))
