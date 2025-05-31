@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+ec2-user-data.sh
 
 # debug
 npm-debug.log*
